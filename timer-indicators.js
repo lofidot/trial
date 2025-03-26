@@ -101,33 +101,75 @@ function updatePomodoroState() {
     const pomodoroDisplay = document.getElementById('pomodoro-timer-display');
     const pomodoroTimeDisplay = document.getElementById('pomodoro-time');
     const regularTimeDisplay = document.getElementById('regular-time-display');
+    const sleepDisplay = document.getElementById('sleep-timer-display');
     
     if (!pomodoroDisplay || !pomodoroTimeDisplay || !regularTimeDisplay) return;
     
-    // Look for elements with pomodoro in their class or ID
-    const pomodoroElements = document.querySelectorAll('[class*="pomodoro"], [id*="pomodoro"]');
+    // Check for any dialogs/modals that contain pomodoro
+    const pomodoroDialogs = Array.from(document.querySelectorAll('[class*="dialog"], [role="dialog"], [class*="modal"], [class*="pomodoro"]'));
     let isActive = false;
+    let timerText = '';
     
-    pomodoroElements.forEach(element => {
-        // Look for a time display within this element
-        const timeDisplays = element.querySelectorAll('[class*="time"], [class*="counter"]');
-        timeDisplays.forEach(timeDisplay => {
-            const text = timeDisplay.textContent?.trim();
-            if (text && /\d+:\d+/.test(text)) {
-                // Check if this timer is running (look for a pause button)
-                const pauseButton = element.querySelector('[aria-label*="Pause"], [title*="Pause"]');
-                if (pauseButton) {
-                    pomodoroTimeDisplay.textContent = text;
-                    isActive = true;
+    for (const dialog of pomodoroDialogs) {
+        // Check if the dialog is visible
+        if (dialog.offsetParent !== null && 
+            (dialog.textContent.toLowerCase().includes('pomodoro') || 
+            dialog.id.toLowerCase().includes('pomodoro'))) {
+            
+            // Look for time displays within the dialog
+            const timeElements = Array.from(dialog.querySelectorAll('[class*="time"], [class*="counter"], [class*="timer"], [class*="clock"]'));
+            
+            for (const timeElement of timeElements) {
+                const text = timeElement.textContent.trim();
+                if (text && /\d+:\d+/.test(text)) {
+                    // Check if there's a pause button or other indicator of an active timer
+                    const pauseButtons = dialog.querySelectorAll('[aria-label*="pause" i], [title*="pause" i], button:contains("Pause")');
+                    const isRunning = pauseButtons.length > 0 || 
+                                     dialog.querySelector('[class*="running" i], [data-running="true"], [data-state="running"]') !== null;
+                    
+                    if (isRunning) {
+                        isActive = true;
+                        timerText = text;
+                        break;
+                    }
                 }
             }
-        });
-    });
+            
+            // If no time element with pause button, look for any time element
+            if (!isActive) {
+                const buttons = dialog.querySelectorAll('button, [role="button"]');
+                for (const button of buttons) {
+                    if (button.textContent.toLowerCase().includes('pause') || 
+                        button.getAttribute('aria-label')?.toLowerCase().includes('pause')) {
+                        const timeElements = dialog.querySelectorAll('[class*="time"]');
+                        if (timeElements.length > 0) {
+                            isActive = true;
+                            timerText = timeElements[0].textContent.trim();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
     
-    if (isActive) {
+    // Also check for global pomodoro state in React app state
+    const appStateElements = document.querySelectorAll('[data-pomodoro-running="true"], [data-pomodoro-state="running"]');
+    if (appStateElements.length > 0) {
+        isActive = true;
+        const timeElement = document.querySelector('[data-pomodoro-time]');
+        if (timeElement) {
+            timerText = timeElement.textContent.trim();
+        }
+    }
+    
+    // Update the display based on what we found
+    if (isActive && timerText) {
+        pomodoroTimeDisplay.textContent = timerText;
         pomodoroDisplay.style.display = 'flex';
+        sleepDisplay.style.display = 'none';
         regularTimeDisplay.style.display = 'none';
-    } else if (document.getElementById('sleep-timer-display').style.display !== 'flex') {
+    } else if (sleepDisplay.style.display !== 'flex') {
         pomodoroDisplay.style.display = 'none';
         regularTimeDisplay.style.display = 'flex';
     }
@@ -138,36 +180,79 @@ function updateSleepTimerState() {
     const sleepDisplay = document.getElementById('sleep-timer-display');
     const sleepTimeDisplay = document.getElementById('sleep-time');
     const regularTimeDisplay = document.getElementById('regular-time-display');
+    const pomodoroDisplay = document.getElementById('pomodoro-timer-display');
     
     if (!sleepDisplay || !sleepTimeDisplay || !regularTimeDisplay) return;
     
-    // Look for elements with sleep in their class or ID
-    const sleepElements = document.querySelectorAll('[class*="sleep"], [id*="sleep"]');
+    // Check for any dialogs/modals that contain sleep timer
+    const sleepDialogs = Array.from(document.querySelectorAll('[class*="dialog"], [role="dialog"], [class*="modal"], [class*="sleep"]'));
     let isActive = false;
+    let timerText = '';
     
-    sleepElements.forEach(element => {
-        // Look for a time display within this element
-        const timeDisplays = element.querySelectorAll('[class*="time"], [class*="counter"]');
-        timeDisplays.forEach(timeDisplay => {
-            const text = timeDisplay.textContent?.trim();
-            if (text && /\d+:\d+/.test(text)) {
-                // Check if this timer is running (look for a pause button)
-                const pauseButton = element.querySelector('[aria-label*="Pause"], [title*="Pause"]');
-                if (pauseButton) {
-                    sleepTimeDisplay.textContent = text;
-                    isActive = true;
+    for (const dialog of sleepDialogs) {
+        // Check if the dialog is visible
+        if (dialog.offsetParent !== null && 
+            (dialog.textContent.toLowerCase().includes('sleep') || 
+            dialog.id.toLowerCase().includes('sleep'))) {
+            
+            // Look for time displays within the dialog
+            const timeElements = Array.from(dialog.querySelectorAll('[class*="time"], [class*="counter"], [class*="timer"], [class*="clock"]'));
+            
+            for (const timeElement of timeElements) {
+                const text = timeElement.textContent.trim();
+                if (text && /\d+:\d+/.test(text)) {
+                    // Check if there's a pause button or other indicator of an active timer
+                    const pauseButtons = dialog.querySelectorAll('[aria-label*="pause" i], [title*="pause" i], button:contains("Pause")');
+                    const isRunning = pauseButtons.length > 0 || 
+                                     dialog.querySelector('[class*="running" i], [data-running="true"], [data-state="running"]') !== null;
+                    
+                    if (isRunning) {
+                        isActive = true;
+                        timerText = text;
+                        break;
+                    }
                 }
             }
-        });
-    });
+            
+            // If no time element with pause button, look for any time element
+            if (!isActive) {
+                const buttons = dialog.querySelectorAll('button, [role="button"]');
+                for (const button of buttons) {
+                    if (button.textContent.toLowerCase().includes('pause') || 
+                        button.getAttribute('aria-label')?.toLowerCase().includes('pause')) {
+                        const timeElements = dialog.querySelectorAll('[class*="time"]');
+                        if (timeElements.length > 0) {
+                            isActive = true;
+                            timerText = timeElements[0].textContent.trim();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
     
-    if (isActive) {
+    // Also check for global sleep timer state in React app state
+    const appStateElements = document.querySelectorAll('[data-sleep-timer-running="true"], [data-sleep-timer-state="running"]');
+    if (appStateElements.length > 0) {
+        isActive = true;
+        const timeElement = document.querySelector('[data-sleep-timer-time]');
+        if (timeElement) {
+            timerText = timeElement.textContent.trim();
+        }
+    }
+    
+    // Update the display based on what we found
+    if (isActive && timerText) {
+        sleepTimeDisplay.textContent = timerText;
         sleepDisplay.style.display = 'flex';
+        pomodoroDisplay.style.display = 'none';
         regularTimeDisplay.style.display = 'none';
-        document.getElementById('pomodoro-timer-display').style.display = 'none';
-    } else if (document.getElementById('pomodoro-timer-display').style.display !== 'flex') {
+    } else if (pomodoroDisplay.style.display !== 'flex') {
         sleepDisplay.style.display = 'none';
-        regularTimeDisplay.style.display = 'flex';
+        if (regularTimeDisplay) {
+            regularTimeDisplay.style.display = 'flex';
+        }
     }
 }
 
@@ -178,6 +263,41 @@ function getCurrentTime() {
     const minutes = now.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
 }
+
+// Add a manual test function that can be called from the browser console
+window.testPomodoroTimer = function(active, timeValue = "25:00") {
+    const pomodoroDisplay = document.getElementById('pomodoro-timer-display');
+    const pomodoroTimeDisplay = document.getElementById('pomodoro-time');
+    const regularTimeDisplay = document.getElementById('regular-time-display');
+    const sleepDisplay = document.getElementById('sleep-timer-display');
+    
+    if (active) {
+        if (pomodoroTimeDisplay) pomodoroTimeDisplay.textContent = timeValue;
+        if (pomodoroDisplay) pomodoroDisplay.style.display = 'flex';
+        if (sleepDisplay) sleepDisplay.style.display = 'none';
+        if (regularTimeDisplay) regularTimeDisplay.style.display = 'none';
+    } else {
+        if (pomodoroDisplay) pomodoroDisplay.style.display = 'none';
+        if (regularTimeDisplay) regularTimeDisplay.style.display = 'flex';
+    }
+};
+
+window.testSleepTimer = function(active, timeValue = "30:00") {
+    const sleepDisplay = document.getElementById('sleep-timer-display');
+    const sleepTimeDisplay = document.getElementById('sleep-time');
+    const regularTimeDisplay = document.getElementById('regular-time-display');
+    const pomodoroDisplay = document.getElementById('pomodoro-timer-display');
+    
+    if (active) {
+        if (sleepTimeDisplay) sleepTimeDisplay.textContent = timeValue;
+        if (sleepDisplay) sleepDisplay.style.display = 'flex';
+        if (pomodoroDisplay) pomodoroDisplay.style.display = 'none';
+        if (regularTimeDisplay) regularTimeDisplay.style.display = 'none';
+    } else {
+        if (sleepDisplay) sleepDisplay.style.display = 'none';
+        if (regularTimeDisplay) regularTimeDisplay.style.display = 'flex';
+    }
+};
 
 // Run the setup function
 setupTimerIndicators();
